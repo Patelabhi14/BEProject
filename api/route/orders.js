@@ -1,10 +1,12 @@
 const express = require('express');
+
 const Order = require('../model/order');
 const Product = require('../model/product');
+const checkAuth = require('../middleware/Auth/check-auth');
 
 const router = express.Router();
 
-router.get('/', (req, res, next) => {
+router.get('/', checkAuth, (req, res, next) => {
 	Order.find()
 		.populate('product')
 		.exec()
@@ -17,7 +19,7 @@ router.get('/', (req, res, next) => {
 			});
 		});
 });
-router.post('/', (req, res, next) => {
+router.post('/', checkAuth, (req, res, next) => {
 	const productId = req.body.product;
 	Product.findById(productId)
 		.exec()
@@ -43,7 +45,7 @@ router.post('/', (req, res, next) => {
 			});
 		});
 });
-router.get('/:orderId', (req, res, next) => {
+router.get('/:orderId', checkAuth, (req, res, next) => {
 	const id = req.params.orderId;
 	Order.findById(id)
 		.populate('product')
@@ -65,7 +67,7 @@ router.get('/:orderId', (req, res, next) => {
 			});
 		});
 });
-router.delete('/:orderId', (req, res, next) => {
+router.delete('/:orderId', checkAuth, (req, res, next) => {
 	const id = req.params.orderId;
 	Order.findById(id)
 		.exec()

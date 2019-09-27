@@ -1,5 +1,9 @@
 const express = require('express');
+
 const Product = require('../model/product');
+const checkAuth = require('../middleware/Auth/check-auth');
+const copyProduct = require('../middleware/Product/copy-product');
+const removeProduct = require('../middleware/Product/remove-product');
 
 const router = express.Router();
 
@@ -15,25 +19,31 @@ router.get('/', (req, res, next) => {
 			});
 		});
 });
-router.post('/', (req, res, next) => {
-	const product = new Product({
-		title: req.body.title,
-		price: req.body.price,
-		description: req.body.description,
-		category: req.body.category,
-		isBooked: req.body.isBooked
-	});
-	product
-		.save()
-		.then(createdProduct => {
-			res.status(201).json(createdProduct);
-		})
-		.catch(err => {
-			res.status(500).json({
-				error: err
-			});
+router.post(
+	'/',
+	checkAuth,
+	(userData, req, res, next) => {
+		const product = new Product({
+			title: req.body.title,
+			price: req.body.price,
+			description: req.body.description,
+			category: req.body.category,
+			isBooked: req.body.isBooked
 		});
-});
+		product
+			.save()
+			.then(createdProduct => {
+				userData.createdProductId = createdProduct._id;
+				next(userData);
+			})
+			.catch(err => {
+				res.status(500).json({
+					error: err
+				});
+			});
+	},
+	copyProduct
+);
 router.get('/:productId', (req, res, next) => {
 	const id = req.params.productId;
 	Product.findById(id)
@@ -55,7 +65,7 @@ router.get('/:productId', (req, res, next) => {
 			});
 		});
 });
-router.patch('/:productId', (req, res, next) => {
+router.patch('/:productId', checkAuth, (userData, req, res, next) => {
 	const id = req.params.productId;
 	Product.findById(id)
 		.exec()
@@ -82,8 +92,7 @@ router.patch('/:productId', (req, res, next) => {
 			});
 		});
 });
-router.delete('/:productId', (req, res, next) => {
-	const id = req.params.productId;
+router.delete('/:productId', checkAuth, removeProduct, (id, req, res, next) => {
 	Product.findById(id)
 		.exec()
 		.then(product => {

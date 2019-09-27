@@ -5,13 +5,15 @@ const mongoose = require('mongoose');
 const productRoutes = require('./api/route/products');
 const orderRoutes = require('./api/route/orders');
 const userRoutes = require('./api/route/users');
+const authRoutes = require('./api/route/auth');
 
 const app = express();
 
 mongoose
 	.connect('mongodb://localhost:27017/BEProject', {
 		useNewUrlParser: true,
-		useUnifiedTopology: true
+		useUnifiedTopology: true,
+		useFindAndModify: false
 	})
 	.then(() => {
 		console.log('Connected Successfuly');
@@ -27,6 +29,7 @@ app.use(express.json());
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/auth', authRoutes);
 
 app.use((req, res, next) => {
 	const err = new Error('Page Not Found');
