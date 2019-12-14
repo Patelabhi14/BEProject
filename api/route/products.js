@@ -1,12 +1,16 @@
+//initial import
 const express = require('express');
 
+//import product Schema and middlewares
 const Product = require('../model/product');
 const checkAuth = require('../middleware/Auth/check-auth');
 const copyProduct = require('../middleware/Product/copy-product');
 const removeProduct = require('../middleware/Product/remove-product');
 
+//creating routes for /api/products
 const router = express.Router();
 
+//get request for all products
 router.get('/', (req, res, next) => {
 	Product.find()
 		.exec()
@@ -19,6 +23,7 @@ router.get('/', (req, res, next) => {
 			});
 		});
 });
+//post request for creating new product
 router.post(
 	'/',
 	checkAuth,
@@ -44,6 +49,7 @@ router.post(
 	},
 	copyProduct
 );
+//get request for specific productId
 router.get('/:productId', (req, res, next) => {
 	const id = req.params.productId;
 	Product.findById(id)
@@ -65,6 +71,7 @@ router.get('/:productId', (req, res, next) => {
 			});
 		});
 });
+//patch request for updating specific productId
 router.patch('/:productId', checkAuth, (userData, req, res, next) => {
 	const id = req.params.productId;
 	Product.findById(id)
@@ -92,6 +99,7 @@ router.patch('/:productId', checkAuth, (userData, req, res, next) => {
 			});
 		});
 });
+//delete request for deleting specific productId
 router.delete('/:productId', checkAuth, removeProduct, (id, req, res, next) => {
 	Product.findById(id)
 		.exec()
@@ -116,4 +124,5 @@ router.delete('/:productId', checkAuth, removeProduct, (id, req, res, next) => {
 		});
 });
 
+//module export
 module.exports = router;

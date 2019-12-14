@@ -1,16 +1,22 @@
+//intial export
 const express = require('express');
 
+//importing order, product and user Schema and middlewares
 const Order = require('../model/order');
 const Product = require('../model/product');
+const User = require('../model/user');
 const checkAuth = require('../middleware/Auth/check-auth');
 const copyOrder = require('../middleware/Order/copy-order');
 const removeOrder = require('../middleware/Order/remove-order');
 
+//creating routes for /api/orders
 const router = express.Router();
 
+//get all orders for specific userId
 router.get('/', checkAuth, (userData, req, res, next) => {
-	Order.find()
-		.populate('product')
+	User.findById(userData.id)
+		.select('orders')
+		.populate({ path: 'orders', populate: { path: 'product' } })
 		.exec()
 		.then(orders => {
 			res.status(200).json(orders);
@@ -21,6 +27,7 @@ router.get('/', checkAuth, (userData, req, res, next) => {
 			});
 		});
 });
+//creating new order for specific userId
 router.post(
 	'/',
 	checkAuth,
@@ -53,14 +60,15 @@ router.post(
 	},
 	copyOrder
 );
+//get specific order for specific userId
 router.get('/:orderId', checkAuth, (userData, req, res, next) => {
-	const id = req.params.orderId;
-	Order.findById(id)
-		.populate('product')
+	User.findById(userData.id)
+		.select('orders')
+		.populate({ path: 'orders', populate: { path: 'product' } })
 		.exec()
-		.then(order => {
-			if (order) {
-				res.status(200).json(order);
+		.then(user => {
+			if (user) {
+				res.status(200).json(result);
 			} else {
 				res.status(404).json({
 					error: {
@@ -75,6 +83,7 @@ router.get('/:orderId', checkAuth, (userData, req, res, next) => {
 			});
 		});
 });
+//delete specific order for specific userId
 router.delete('/:orderId', checkAuth, removeOrder, (id, req, res, next) => {
 	Order.findById(id)
 		.exec()
@@ -98,4 +107,5 @@ router.delete('/:orderId', checkAuth, removeOrder, (id, req, res, next) => {
 		});
 });
 
+//module export
 module.exports = router;

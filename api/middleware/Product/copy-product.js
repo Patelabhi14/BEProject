@@ -1,14 +1,16 @@
+//import user Schema
 const User = require('../../model/user');
 
+//export copy product function
 module.exports = (userData, req, res, next) => {
-	User.findById(userData.id)
+	User.findOneAndUpdate(
+		{ _id: userData.id },
+		{ $push: { products: userData.createdProductId } },
+		{ new: true }
+	)
+		.select('products')
+		.populate({ path: 'products' })
 		.exec()
-		.then(availableUser => {
-			return User.updateOne(
-				{ _id: availableUser._id },
-				{ $push: { products: userData.createdProductId } }
-			).exec();
-		})
 		.then(updatedUser => {
 			res.status(200).json(updatedUser);
 		})
