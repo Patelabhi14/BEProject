@@ -14,13 +14,12 @@ router.post('/signup', (req, res, next) => {
 	User.findOne({ email: req.body.email })
 		.exec()
 		.then(availableUser => {
-			if (availableUser) {
+			if (availableUser)
 				return res.status(409).json({
 					error: {
 						message: 'User already exists'
 					}
 				});
-			}
 			return bcrypt.hash(req.body.password, 10);
 		})
 		.then(hash => {
@@ -49,15 +48,15 @@ router.post('/login', (req, res, next) => {
 	User.findOne({ email: req.body.email })
 		.exec()
 		.then(availableUser => {
-			if (!availableUser) {
+			if (!availableUser)
 				return res.status(401).json({
 					error: {
 						message: 'Auth failed'
 					}
 				});
-			}
-			bcrypt.compare(req.body.password, availableUser.password, function(err, result) {
-				if (!result) return res.status(401).json({ error: { message: 'Auth failed' } });
+			bcrypt.compare(req.body.password, availableUser.password, function(err, validPassword) {
+				if (!validPassword)
+					return res.status(401).json({ error: { message: 'Auth failed' } });
 				const token = jwt.sign(
 					{ id: availableUser._id, email: availableUser.email },
 					process.env.SECRET_KEY,
@@ -102,9 +101,12 @@ router.post('/login', (req, res, next) => {
 });
 //post request for token exchange
 router.post('/token', (req, res, next) => {
-	jwt.verify(req.body.refreshToken, process.env.SECRET_REFRESH_KEY, function(refresh, decoded) {
-		if (!refresh) res.status(200).json(decoded);
-		else if (refresh.name === 'TokenExpiredError') {
+	jwt.verify(req.body.refreshToken, process.env.SECRET_REFRESH_KEY, function(
+		invalidRefreshToken,
+		decoded
+	) {
+		if (!invalidRefreshToken) res.status(200).json(decoded);
+		else if (invalidRefreshToken.name === 'TokenExpiredError') {
 			User.findOne({ email: req.body.email })
 				.exec()
 				.then(availableUser => {

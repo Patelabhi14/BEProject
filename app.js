@@ -51,16 +51,16 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 
 //genral error handling
-// app.use((req, res, next) => {
-// 	const err = new Error('Page Not Found');
-// 	err.status = 404;
-// 	next(err);
-// });
-// app.use((err, req, res, next) => {
-// 	res.status(err.status).json({
-// 		error: err
-// 	});
-// });
+app.use((req, res, next) => {
+	const err = new Error('Page Not Found');
+	err.status = 404;
+	next(err);
+});
+app.use((err, req, res, next) => {
+	res.status(err.status).json({
+		error: err
+	});
+});
 
 //module export
 module.exports = app;

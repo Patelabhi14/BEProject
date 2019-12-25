@@ -6,7 +6,7 @@ const productSchema = new mongoose.Schema({
 	title: { type: String, required: true },
 	price: { type: Number, required: true },
 	description: { type: String, default: '' },
-	category: { type: String, required: true },
+	category: { type: String, required: true, enum: ['Electronics', 'Places', 'Automobile'] },
 	isBooked: { type: Boolean, default: false }
 });
 
