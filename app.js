@@ -19,7 +19,7 @@ mongoose
 		useFindAndModify: false
 	})
 	.then(() => {
-		console.log('Connected Successfuly');
+		console.log('Connected Successfully');
 	})
 	.catch(err => {
 		console.log(err);
@@ -27,8 +27,23 @@ mongoose
 
 //request parsing
 app.use(morgan('dev'));
+app.use(express.static('uploads'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+//handling CORS
+app.use((req, res, next) => {
+	res.header('Access-Control-Allow-Origin', '*');
+	res.header(
+		'Access-Control-Allow-Headers',
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+	);
+	if (req.method === 'OPTIONS') {
+		res.header('Access-Control-Allow-Methods', 'POST, GET, PATCH, DELETE');
+		return res.status(200).json({});
+	}
+	next();
+});
 
 //request handling
 app.use('/api/products', productRoutes);
@@ -36,16 +51,16 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 
 //genral error handling
-app.use((req, res, next) => {
-	const err = new Error('Page Not Found');
-	err.status = 404;
-	next(err);
-});
-app.use((err, req, res, next) => {
-	res.status(err.status).json({
-		error: err
-	});
-});
+// app.use((req, res, next) => {
+// 	const err = new Error('Page Not Found');
+// 	err.status = 404;
+// 	next(err);
+// });
+// app.use((err, req, res, next) => {
+// 	res.status(err.status).json({
+// 		error: err
+// 	});
+// });
 
 //module export
 module.exports = app;

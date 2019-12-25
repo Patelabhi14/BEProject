@@ -14,7 +14,6 @@ router.post('/signup', (req, res, next) => {
 	User.findOne({ email: req.body.email })
 		.exec()
 		.then(availableUser => {
-			console.log(availableUser);
 			if (availableUser) {
 				return res.status(409).json({
 					error: {

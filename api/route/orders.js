@@ -13,10 +13,14 @@ const removeOrder = require('../middleware/Order/remove-order');
 const router = express.Router();
 
 //get all orders for specific userId
-router.get('/', checkAuth, (userData, req, res, next) => {
-	User.findById(userData.id)
+router.get('/', checkAuth, (req, res, next) => {
+	User.findById(req.user.id)
 		.select('orders')
-		.populate({ path: 'orders', populate: { path: 'product' } })
+		.populate({
+			path: 'orders',
+			populate: { path: 'product' },
+			options: { limit: parseInt(req.query.limit), skip: parseInt(req.query.skip) }
+		})
 		.exec()
 		.then(orders => {
 			res.status(200).json(orders);
@@ -31,7 +35,7 @@ router.get('/', checkAuth, (userData, req, res, next) => {
 router.post(
 	'/',
 	checkAuth,
-	(userData, req, res, next) => {
+	(req, res, next) => {
 		const productId = req.body.product;
 		Product.findById(productId)
 			.exec()
@@ -49,8 +53,8 @@ router.post(
 				});
 			})
 			.then(createdOrder => {
-				userData.createdOrderId = createdOrder._id;
-				next(userData);
+				req.user.createdOrderId = createdOrder._id;
+				next();
 			})
 			.catch(err => {
 				res.status(500).json({
@@ -61,21 +65,22 @@ router.post(
 	copyOrder
 );
 //get specific order for specific userId
-router.get('/:orderId', checkAuth, (userData, req, res, next) => {
-	User.findById(userData.id)
+router.get('/:orderId', checkAuth, (req, res, next) => {
+	const id = req.params.orderId;
+	User.findOne({ _id: req.user.id, orders: id })
 		.select('orders')
 		.populate({ path: 'orders', populate: { path: 'product' } })
 		.exec()
-		.then(user => {
-			if (user) {
-				res.status(200).json(result);
-			} else {
+		.then(orders => {
+			if (orders) {
+				const order = orders.orders.find(o => o._id == id);
+				res.status(200).json(order);
+			} else
 				res.status(404).json({
 					error: {
 						message: 'Page Not Found'
 					}
 				});
-			}
 		})
 		.catch(err => {
 			res.status(500).json({
@@ -84,21 +89,20 @@ router.get('/:orderId', checkAuth, (userData, req, res, next) => {
 		});
 });
 //delete specific order for specific userId
-router.delete('/:orderId', checkAuth, removeOrder, (id, req, res, next) => {
-	Order.findById(id)
+router.delete('/:orderId', checkAuth, removeOrder, (req, res, next) => {
+	Order.findByIdAndRemove(req.params.orderId)
+		.populate('product')
 		.exec()
-		.then(order => {
-			if (order) {
-				return Order.remove({ _id: id }).exec();
-			}
-			res.status(404).json({
-				error: {
-					message: 'Page Not Found'
-				}
-			});
-		})
 		.then(deletedOrder => {
-			res.status(200).json(deletedOrder);
+			if (deletedOrder) {
+				res.status(200).json(deletedOrder);
+			} else {
+				res.status(404).json({
+					error: {
+						message: 'Page Not Found'
+					}
+				});
+			}
 		})
 		.catch(err => {
 			res.status(500).json({

@@ -2,17 +2,20 @@
 const User = require('../../model/user');
 
 //export copy order function
-module.exports = (userData, req, res, next) => {
+module.exports = (req, res, next) => {
 	User.findOneAndUpdate(
-		{ _id: userData.id },
-		{ $push: { orders: userData.createdOrderId } },
+		{ _id: req.user.id },
+		{ $push: { orders: req.user.createdOrderId } },
 		{ new: true }
 	)
 		.select('orders')
-		.populate({ path: 'orders' })
+		.populate({ path: 'orders', populate: { path: 'product' } })
 		.exec()
 		.then(updatedOrder => {
-			res.status(200).json(updatedOrder);
+			const order = updatedOrder.orders.find(
+				o => String(o._id) == String(req.user.createdOrderId)
+			);
+			res.status(200).json(order);
 		})
 		.catch(err => {
 			res.status(500).json({
