@@ -61,14 +61,14 @@ router.post('/login', (req, res, next) => {
 					{ id: availableUser._id, email: availableUser.email },
 					process.env.SECRET_KEY,
 					{
-						expiresIn: '1h'
+						expiresIn: '30s'
 					}
 				);
 				const refreshToken = jwt.sign(
 					{ id: availableUser._id, email: req.body.email },
 					process.env.SECRET_REFRESH_KEY,
 					{
-						expiresIn: '7d'
+						expiresIn: '1m'
 					}
 				);
 				User.findOneAndUpdate(
@@ -101,17 +101,28 @@ router.post('/login', (req, res, next) => {
 });
 //post request for token exchange
 router.post('/token', (req, res, next) => {
-	jwt.verify(req.body.refreshToken, process.env.SECRET_REFRESH_KEY, function(
-		invalidRefreshToken,
-		decoded
-	) {
-		if (!invalidRefreshToken) res.status(200).json(decoded);
-		else if (invalidRefreshToken.name === 'TokenExpiredError') {
-			User.findOne({ email: req.body.email })
-				.exec()
-				.then(availableUser => {
-					if (!availableUser)
-						return res.status(401).json({ error: { message: 'Auth failed' } });
+	User.findOne({ email: req.body.email, refreshToken: req.body.refreshToken })
+		.exec()
+		.then(availableUser => {
+			if (!availableUser) return res.status(401).json({ error: { message: 'Auth failed' } });
+			try {
+				const refresh = jwt.verify(req.body.refreshToken, process.env.SECRET_REFRESH_KEY);
+				const token = jwt.sign(
+					{ id: availableUser._id, email: availableUser.email },
+					process.env.SECRET_KEY,
+					{
+						expiresIn: '1h'
+					}
+				);
+				return User.findOneAndUpdate(
+					{ email: availableUser.email },
+					{ $set: { token } },
+					{ new: true }
+				)
+					.select('token')
+					.exec();
+			} catch (invalidRefreshToken) {
+				if (invalidRefreshToken.name === 'TokenExpiredError') {
 					const token = jwt.sign(
 						{ id: availableUser._id, email: availableUser.email },
 						process.env.SECRET_KEY,
@@ -128,26 +139,23 @@ router.post('/token', (req, res, next) => {
 					);
 					return User.findOneAndUpdate(
 						{ email: availableUser.email },
-						{ $set: { token: token, refreshToken: refreshToken } },
+						{ $set: { token, refreshToken } },
 						{ new: true }
-					).exec();
-				})
-				.then(updatedUser => {
-					res.status(200).json({
-						message: 'Auth Successfull',
-						token: updatedUser.token,
-						refreshToken: updatedUser.refreshToken
-					});
-				})
-				.catch(err => {
-					res.status(401).json({
-						error: {
-							message: 'Auth failed'
-						}
-					});
-				});
-		} else res.status(401).json({ error: { message: 'Auth failed' } });
-	});
+					)
+						.select('token refreshToken')
+						.exec();
+				}
+			}
+		})
+		.then(updatedUser => {
+			if (!updatedUser) return res.status(401).json({ error: { message: 'Auth failed' } });
+			res.status(200).json(updatedUser);
+		})
+		.catch(err => {
+			res.status(500).json({
+				error: err
+			});
+		});
 });
 
 //module export
