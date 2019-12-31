@@ -13,35 +13,29 @@ const removeProduct = require('../middleware/Product/remove-product');
 const router = express.Router();
 
 //body parsing using multer
-const storage = multer.diskStorage({
-	destination: function(req, file, cb) {
-		cb(null, './uploads/');
-	},
-	filename: function(req, file, cb) {
-		cb(null, Date.now() + '-' + file.originalname);
+const upload = multer({
+	limits: {
+		fileSize: 1024 * 1024
 	}
 });
-const upload = multer({ storage: storage });
 
 //get request for all products
 router.get('/', (req, res, next) => {
 	let isBooked = {};
 	let category = {};
-
 	if (req.query.isBooked === 'true') isBooked = true;
 	else isBooked = false;
-
 	if (req.query.category === 'Electronics') category = 'Electronics';
 	else if (req.query.category === 'Places') category = 'Places';
 	else if (req.query.category === 'Automobile') category = 'Automobile';
 	else category = 'Places';
-
 	Product.find({ isBooked: isBooked, category: category }, null, {
 		limit: parseInt(req.query.limit),
 		skip: parseInt(req.query.skip)
 	})
 		.exec()
 		.then(products => {
+			res.set('Content-Type', 'image/jpg');
 			res.status(200).json(products);
 		})
 		.catch(err => {
@@ -61,7 +55,8 @@ router.post(
 			price: req.body.price,
 			description: req.body.description,
 			category: req.body.category,
-			isBooked: req.body.isBooked
+			isBooked: req.body.isBooked,
+			productImage: req.file.buffer
 		});
 		product
 			.save()
@@ -84,6 +79,7 @@ router.get('/:productId', (req, res, next) => {
 		.exec()
 		.then(product => {
 			if (product) {
+				res.set('Content-Type', 'image/jpg');
 				res.status(200).json(product);
 			} else {
 				res.status(404).json({

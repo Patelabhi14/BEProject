@@ -61,14 +61,14 @@ router.post('/login', (req, res, next) => {
 					{ id: availableUser._id, email: availableUser.email },
 					process.env.SECRET_KEY,
 					{
-						expiresIn: '30s'
+						expiresIn: '1h'
 					}
 				);
 				const refreshToken = jwt.sign(
 					{ id: availableUser._id, email: req.body.email },
 					process.env.SECRET_REFRESH_KEY,
 					{
-						expiresIn: '1m'
+						expiresIn: '7d'
 					}
 				);
 				User.findOneAndUpdate(
