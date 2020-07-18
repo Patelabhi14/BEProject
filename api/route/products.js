@@ -4,154 +4,155 @@ const multer = require('multer');
 
 //import product Schema and middlewares
 const Product = require('../model/product');
-const User = require('../model/user');
 const checkAuth = require('../middleware/Auth/check-auth');
-const copyProduct = require('../middleware/Product/copy-product');
-const removeProduct = require('../middleware/Product/remove-product');
 
 //creating routes for /api/products
 const router = express.Router();
 
-//body parsing using multer
-const upload = multer({
-	limits: {
-		fileSize: 1024 * 1024
-	}
-});
-
 //get request for all products
-router.get('/', (req, res, next) => {
-	let isBooked = {};
-	let category = {};
-	if (req.query.isBooked === 'true') isBooked = true;
-	else isBooked = false;
-	if (req.query.category === 'Electronics') category = 'Electronics';
-	else if (req.query.category === 'Places') category = 'Places';
-	else if (req.query.category === 'Automobile') category = 'Automobile';
-	else category = 'Places';
-	Product.find({ isBooked: isBooked, category: category }, null, {
+router.get('/', checkAuth, (req, res, next) => {
+	const userId = req.user.id;
+	Product.find({ userId: { $ne: userId } }, null, {
 		limit: parseInt(req.query.limit),
-		skip: parseInt(req.query.skip)
+		skip: parseInt(req.query.skip),
 	})
+		.select('-__v')
 		.exec()
-		.then(products => {
-			res.set('Content-Type', 'image/jpg');
+		.then((products) => {
 			res.status(200).json(products);
 		})
-		.catch(err => {
+		.catch((err) => {
 			res.status(500).json({
-				error: err
+				error: err,
 			});
 		});
 });
-//post request for creating new product
-router.post(
-	'/',
-	checkAuth,
-	upload.single('productImage'),
-	(req, res, next) => {
-		const product = new Product({
-			title: req.body.title,
-			price: req.body.price,
-			description: req.body.description,
-			category: req.body.category,
-			isBooked: req.body.isBooked,
-			productImage: req.file.buffer
-		});
-		product
-			.save()
-			.then(createdProduct => {
-				req.user.createdProductId = createdProduct._id;
-				next();
-			})
-			.catch(err => {
-				res.status(500).json({
-					error: err
-				});
+
+//get request for my products
+router.get('/my', checkAuth, (req, res, next) => {
+	const userId = req.user.id;
+	Product.find({ userId: userId })
+		.select('-__v')
+		.exec()
+		.then((products) => {
+			res.status(200).json(products);
+		})
+		.catch((err) => {
+			res.status(500).json({
+				error: err,
 			});
-	},
-	copyProduct
-);
+		});
+});
+
 //get request for specific productId
-router.get('/:productId', (req, res, next) => {
+router.get('/single/:productId', checkAuth, (req, res, next) => {
 	const id = req.params.productId;
 	Product.findById(id)
+		.select('-__v')
 		.exec()
-		.then(product => {
+		.then((product) => {
 			if (product) {
-				res.set('Content-Type', 'image/jpg');
 				res.status(200).json(product);
 			} else {
 				res.status(404).json({
 					error: {
-						message: 'Page Not Found'
-					}
+						message: 'Page Not Found',
+					},
 				});
 			}
 		})
-		.catch(err => {
+		.catch((err) => {
 			res.status(500).json({
-				error: err
+				error: err,
 			});
 		});
 });
+
+//post request for creating new product
+router.post('/', checkAuth, (req, res, next) => {
+	const product = new Product({
+		title: req.body.title,
+		price: req.body.price,
+		description: req.body.description,
+		category: req.body.category,
+		isBooked: req.body.isBooked,
+		userId: req.user.id,
+		location: req.body.location,
+		imageUrl: req.body.imageUrl,
+	});
+	product
+		.save()
+		.then((product) => {
+			const createdProduct = {
+				_id: product._id,
+				category: product.category,
+				title: product.title,
+				description: product.description,
+				price: product.price,
+				userId: product.userId,
+				isBooked: product.isBooked,
+				location: product.location,
+				imageUrl: req.body.imageUrl,
+			};
+			res.status(201).json(createdProduct);
+		})
+		.catch((err) => {
+			res.status(500).json({
+				error: err,
+			});
+		});
+});
+
 //patch request for updating specific productId
 router.patch('/:productId', checkAuth, (req, res, next) => {
 	const id = req.params.productId;
-	User.findOne({ _id: req.user.id, products: id })
+	const updateOps = {};
+	for (const ops of req.body) updateOps[ops.propName] = ops.value;
+	Product.findOneAndUpdate(
+		{ _id: id, userId: req.user.id },
+		{ $set: updateOps },
+		{ new: true }
+	)
+		.select('-__v')
 		.exec()
-		.then(product => {
-			if (!product)
-				return res.status(404).json({
+		.then((updatedProduct) => {
+			if (updatedProduct) {
+				res.status(200).json(updatedProduct);
+			} else {
+				res.status(404).json({
 					error: {
-						message: 'Page Not Found'
-					}
+						message: 'Page Not Found',
+					},
 				});
-			const updateOps = {};
-			for (const ops of req.body) {
-				updateOps[ops.propName] = ops.value;
 			}
-			Product.findByIdAndUpdate(id, { $set: updateOps }, { new: true })
-				.exec()
-				.then(updatedProduct => {
-					if (updatedProduct) {
-						res.status(200).json(updatedProduct);
-					} else {
-						res.status(404).json({
-							error: {
-								message: 'Page Not Found'
-							}
-						});
-					}
-				})
-				.catch(err => {
-					throw new Error(err);
-				});
 		})
-		.catch(err => {
+		.catch((err) => {
 			res.status(500).json({
-				error: err
+				error: err,
 			});
 		});
 });
+
 //delete request for deleting specific productId
-router.delete('/:productId', checkAuth, removeProduct, (req, res, next) => {
-	Product.findByIdAndRemove(req.params.productId)
+router.delete('/:productId', checkAuth, (req, res, next) => {
+	const id = req.params.productId;
+	Product.findOneAndRemove({ _id: id, userId: req.user.id })
+		.select('-__v')
 		.exec()
-		.then(deletedProduct => {
+		.then((deletedProduct) => {
 			if (deletedProduct) {
 				res.status(200).json(deletedProduct);
 			} else {
 				res.status(404).json({
 					error: {
-						message: 'Page Not Found'
-					}
+						message: 'Page Not Found',
+					},
 				});
 			}
 		})
-		.catch(err => {
+		.catch((err) => {
 			res.status(500).json({
-				error: err
+				error: err,
 			});
 		});
 });

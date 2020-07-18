@@ -11,9 +11,7 @@ const userSchema = mongoose.Schema({
 	},
 	userName: { type: String, required: true },
 	password: { type: String, required: true },
-	phoneNumber: { type: Number, required: true },
-	products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null }],
-	orders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null }],
+	mobileNumber: { type: Number, required: true },
 	token: { type: String },
 	refreshToken: { type: String }
 });
